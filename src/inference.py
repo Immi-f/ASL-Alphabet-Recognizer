@@ -52,6 +52,8 @@ def main():
         if not ret:
             break
 
+        frame = cv2.flip(frame, 1)
+
         h, w = frame.shape[:2]
         cx, cy = w // 2, h // 2
         x1, y1 = cx - roi // 2, cy - roi // 2
