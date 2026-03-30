@@ -87,7 +87,7 @@ def save_plots(history, runs_dir):
 
 def main():
     args = parse_args()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
     print(f"Using device: {device}")
 
     train_csv = os.path.join(args.splits_dir, "train.csv")
