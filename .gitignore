@@ -1,0 +1,12 @@
+data/raw/
+data/processed/
+checkpoints/
+runs/
+*.pth
+*.pt
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
