@@ -12,12 +12,12 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from dataset import ASLDataset, LABEL_MAP, train_transform, val_transform
-from model import build_model, freeze_backbone, unfreeze_backbone
+from model import AVAILABLE_MODELS, build_model, freeze_backbone, unfreeze_backbone
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Train ASL Alphabet Recognizer.")
-    parser.add_argument("--data-dir", default="data/raw", help="Root of raw image data.")
+    parser.add_argument("--data-dir", default="data", help="Root of data (contains raw/, archive/).")
     parser.add_argument("--splits-dir", default="data/splits", help="Directory with split CSVs.")
     parser.add_argument("--epochs", type=int, default=15, help="Number of training epochs.")
     parser.add_argument("--batch-size", type=int, default=64, help="Batch size.")
@@ -27,6 +27,8 @@ def parse_args():
     parser.add_argument("--runs-dir", default="runs", help="Directory for training plots.")
     parser.add_argument("--freeze-epochs", type=int, default=3,
                         help="Epochs to train with frozen backbone before unfreezing.")
+    parser.add_argument("--model", default="mobilenet_v3_small", choices=AVAILABLE_MODELS,
+                        help="Backbone architecture to train.")
     return parser.parse_args()
 
 
@@ -88,7 +90,10 @@ def save_plots(history, runs_dir):
 def main():
     args = parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-    print(f"Using device: {device}")
+    print(f"Using device: {device}  |  model: {args.model}")
+
+    checkpoint_dir = os.path.join(args.checkpoint_dir, args.model)
+    runs_dir = os.path.join(args.runs_dir, args.model)
 
     train_csv = os.path.join(args.splits_dir, "train.csv")
     val_csv = os.path.join(args.splits_dir, "val.csv")
@@ -106,7 +111,7 @@ def main():
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
                             num_workers=4, pin_memory=True)
 
-    model = build_model(num_classes=len(LABEL_MAP)).to(device)
+    model = build_model(num_classes=len(LABEL_MAP), arch=args.model).to(device)
     criterion = nn.CrossEntropyLoss()
 
     start_epoch = 0
@@ -122,7 +127,7 @@ def main():
 
     history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": []}
     best_val_acc = 0.0
-    os.makedirs(args.checkpoint_dir, exist_ok=True)
+    os.makedirs(checkpoint_dir, exist_ok=True)
 
     for epoch in range(start_epoch, args.epochs):
         if epoch == args.freeze_epochs:
@@ -144,17 +149,18 @@ def main():
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            ckpt_path = os.path.join(args.checkpoint_dir, "best.pth")
+            ckpt_path = os.path.join(checkpoint_dir, "best.pth")
             torch.save({
                 "epoch": epoch + 1,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
                 "val_acc": val_acc,
                 "label_map": LABEL_MAP,
+                "arch": args.model,
             }, ckpt_path)
             print(f"  ✓ Saved best checkpoint (val_acc={val_acc:.4f})")
 
-    save_plots(history, args.runs_dir)
+    save_plots(history, runs_dir)
     print("Training complete.")
 
 

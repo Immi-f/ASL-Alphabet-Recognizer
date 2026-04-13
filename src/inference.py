@@ -35,7 +35,8 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     ckpt = torch.load(args.checkpoint, map_location=device, weights_only=False)
-    model = build_model(num_classes=len(LABEL_MAP), pretrained=False).to(device)
+    arch = ckpt.get("arch", "mobilenet_v3_small")
+    model = build_model(num_classes=len(LABEL_MAP), pretrained=False, arch=arch).to(device)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
     print(f"Model loaded (epoch {ckpt['epoch']}, val_acc={ckpt['val_acc']:.4f})")

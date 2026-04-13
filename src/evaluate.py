@@ -18,7 +18,7 @@ from dataset import ASLDataset, LABEL_MAP, val_transform
 def parse_args():
     parser = argparse.ArgumentParser(description="Evaluate ASL model on test set.")
     parser.add_argument("--checkpoint", required=True, help="Path to model checkpoint.")
-    parser.add_argument("--data-dir", default="data/raw", help="Root of raw image data.")
+    parser.add_argument("--data-dir", default="data", help="Root of data (contains raw/, archive/).")
     parser.add_argument("--splits-dir", default="data/splits", help="Directory with split CSVs.")
     parser.add_argument("--batch-size", type=int, default=64, help="Batch size.")
     parser.add_argument("--runs-dir", default="runs", help="Directory to save confusion matrix.")
@@ -67,7 +67,8 @@ def main():
     from model import build_model
 
     ckpt = torch.load(args.checkpoint, map_location=device, weights_only=False)
-    model = build_model(num_classes=len(LABEL_MAP), pretrained=False).to(device)
+    arch = ckpt.get("arch", "mobilenet_v3_small")
+    model = build_model(num_classes=len(LABEL_MAP), pretrained=False, arch=arch).to(device)
     model.load_state_dict(ckpt["model_state_dict"])
     print(f"Loaded checkpoint from epoch {ckpt['epoch']} (val_acc={ckpt['val_acc']:.4f})")
 
